@@ -1,0 +1,9 @@
+# backdrop-bridge-dsh 0.6.0 bundle patch: inserts the single consolidated plugin row into the web
+# profile roster. The node half (exports ".") runs in the host process
+# (Wallpaper Engine scanner / applier, /api/dsh-wallpaper routes, agent
+# tools), and the `dsh.client` declaration in package.json makes the browser
+# half (exports "./client", served at /plugins/backdrop-bridge-dsh/client.js) load
+# in the web GUI.
+- insert:
+    - id: wallpaper
+      name: 'backdrop-bridge-dsh'

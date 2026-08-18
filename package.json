@@ -1,0 +1,66 @@
+{
+  "name": "backdrop-bridge-dsh",
+  "description": "dsh-wallpaper: bring Wallpaper Engine wallpapers to DeepSeek Harness with dynamic backgrounds, adaptive UI styling, and desktop control.",
+  "displayName": "dsh-wallpaper",
+  "version": "0.6.0",
+  "author": "dsh-wallpaper contributors",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test test-*.mjs"
+  },
+  "bin": {
+    "backdrop-bridge-dsh": "./bin/dsh-wallpaper.mjs"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "wallpaper-engine",
+    "windows",
+    "wallpaper",
+    "backdrop",
+    "dsh-plugin"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "files": [
+    "lib",
+    "bin",
+    "docs",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "PUBLISHING.md"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kdzhang-hub/dsh-wallpaper.git"
+  },
+  "homepage": "https://github.com/kdzhang-hub/dsh-wallpaper#readme",
+  "bugs": {
+    "url": "https://github.com/kdzhang-hub/dsh-wallpaper/issues"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  }
+}

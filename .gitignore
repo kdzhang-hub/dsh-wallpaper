@@ -1,0 +1,19 @@
+# Package-manager and test artifacts
+node_modules/
+.test-uploads/
+*.tgz
+npm-debug.log*
+pnpm-debug.log*
+
+# Local Harness state and machine-specific configuration
+.dsh/
+profiles/
+uploads/
+scene-cache/
+skin-state.json
+native-set.ps1
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+*.code-workspace
