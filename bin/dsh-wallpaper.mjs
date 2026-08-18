@@ -3,7 +3,7 @@
  * Profile-safe installer for the published package and local development.
  * It never guesses a user name or drive: DSH_HOME wins, then ~/.dsh.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,6 +17,7 @@ const dshHome = resolve(process.env.DSH_HOME || join(homedir(), '.dsh'))
 const profile = join(dshHome, 'profiles', 'web')
 const manifestPath = join(profile, 'package.json')
 const target = join(profile, 'node_modules', packageName)
+const useSourceJunction = resolve(packageRoot) !== resolve(target) && existsSync(join(packageRoot, 'node_modules'))
 
 function readJson(path, fallback) {
   try { return JSON.parse(readFileSync(path, 'utf8')) } catch { return fallback }
@@ -50,7 +51,15 @@ if (command === 'doctor') {
 } else if (command === 'install') {
   if (!existsSync(profile)) throw new Error(`未发现 DSH Web Profile：${profile}。请先运行一次 dsh web，或设置 DSH_HOME。`)
   const manifest = readJson(manifestPath, {})
-  manifest.dependencies = { ...(manifest.dependencies || {}), [packageName]: `file:node_modules/${packageName}` }
+  // A local checkout already owns an installed dependency tree. Linking to it
+  // avoids copying only this package and then failing at boot because its
+  // runtime dependencies were deliberately excluded from the copy. A normal
+  // npm-installed package executes from `target` and keeps its own dependency
+  // layout, so it retains the portable file specifier.
+  manifest.dependencies = {
+    ...(manifest.dependencies || {}),
+    [packageName]: useSourceJunction ? `link:${packageRoot}` : `file:node_modules/${packageName}`,
+  }
   manifest.dsh = manifest.dsh || {}
   manifest.dsh.profile = manifest.dsh.profile || {}
   const existingBundles = Array.isArray(manifest.dsh.profile.bundles) ? manifest.dsh.profile.bundles : []
@@ -67,7 +76,8 @@ if (command === 'doctor') {
   } else {
     rmSync(target, { recursive: true, force: true })
     mkdirSync(dirname(target), { recursive: true })
-    cpSync(packageRoot, target, { recursive: true, filter: src => !src.includes(`${join(packageRoot, 'node_modules')}`) })
+    if (useSourceJunction) symlinkSync(packageRoot, target, process.platform === 'win32' ? 'junction' : 'dir')
+    else cpSync(packageRoot, target, { recursive: true, filter: src => !src.includes(`${join(packageRoot, 'node_modules')}`) })
   }
   writeJson(manifestPath, manifest)
   print({ command, migratedLegacyBundle, ...inspect(), message: '已注册映界桥（backdrop-bridge-dsh）；重启 dsh web 后在 SSH 下方打开“壁纸”。' })

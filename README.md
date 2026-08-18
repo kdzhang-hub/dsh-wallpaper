@@ -3,12 +3,12 @@
 > 把本机 Wallpaper Engine 素材库带进 DeepSeek Harness：浏览、预览并一键设为自适应玻璃背景；需要时也可直接交给 Wallpaper Engine 或 Windows 桌面。
 
 <p align="center">
-  <img src="assets/harness-forest.png" alt="dsh-wallpaper 将森林壁纸应用为 DeepSeek Harness 的半透明玻璃背景" width="96%">
+  <img src="https://raw.githubusercontent.com/kdzhang-hub/dsh-wallpaper/main/assets/harness-forest.png" alt="dsh-wallpaper 将森林壁纸应用为 DeepSeek Harness 的半透明玻璃背景" width="96%">
 </p>
 
 <p align="center">
-  <img src="assets/harness-city.png" alt="dsh-wallpaper 的另一套 Harness 壁纸效果" width="62%">
-  <img src="assets/wallpaper-library.png" alt="dsh-wallpaper 壁纸图库与界面适配设置面板" width="25%">
+  <img src="https://raw.githubusercontent.com/kdzhang-hub/dsh-wallpaper/main/assets/harness-city.png" alt="dsh-wallpaper 的另一套 Harness 壁纸效果" width="62%">
+  <img src="https://raw.githubusercontent.com/kdzhang-hub/dsh-wallpaper/main/assets/wallpaper-library.png" alt="dsh-wallpaper 壁纸图库与界面适配设置面板" width="25%">
 </p>
 
 **dsh-wallpaper** 将本机 Wallpaper Engine 创意工坊、本地项目和你上传的图片集中到 Harness 侧边栏的一个「壁纸」入口。源码、问题追踪和安全更新以 [GitHub 仓库](https://github.com/kdzhang-hub/dsh-wallpaper) 为准。
@@ -17,9 +17,10 @@
 
 ## 你能做什么
 
-- **管理同一份本地图库**：自动发现 Wallpaper Engine 创意工坊和本地项目，也支持上传自己的图片；可按标题、标签和类型搜索筛选。
+- **管理同一份本地图库**：自动发现 Wallpaper Engine 创意工坊和本地项目，也支持上传自己的图片；可按标题、标签和类型搜索筛选，新增素材会实时同步到图库，无法监听时自动降级为定时刷新。
 - **一张壁纸，三个去向**：设为 DeepSeek Harness 全窗口背景；交给 Wallpaper Engine 播放 Scene、视频或网页壁纸；或将静态图片设为 Windows 原生桌面壁纸。
-- **让 Harness 随壁纸自适应**：自动取色、半透明玻璃、暗化、亮度、铺满/完整显示、手动双主题色和安全预设均可调整；设置会跨刷新和多窗口保留。
+- **让 Harness 随壁纸自适应**：自动取色、半透明玻璃、暗化、亮度、铺满/完整显示、动图/视频播放或静态预览、手动双主题色和安全预设均可调整；设置会跨刷新和多窗口保留。
+- **在不同窗口中都好用**：右侧图库可拖动调宽，也支持键盘微调；窄窗口自动切为全屏，避免面板挤压内容。
 - **让 Agent 也能控制**：可让 DeepSeek 列出、搜索、随机切换壁纸，或清除 Harness 背景，并查询 Wallpaper Engine 与当前桌面状态。
 - **默认只在本机工作**：不上传壁纸、不发送遥测；Harness 背景与 Windows 桌面相互独立，不会误改另一端。
 
@@ -39,12 +40,13 @@
 
 - 背景层位于独立的负层级堆叠上下文并永久 `pointer-events:none`。宿主属性识别、媒体加载或其他皮肤适配失败时，只会关闭壁纸显示，绝不会隐藏聊天、SSH、文件区、编辑器或任何 Harness 交互。
 - 图库是独立右侧抽屉，不替换聊天区；「壁纸」入口优先紧跟 SSH，SSH 缺失时才回退到任务板或“新建会话”。宿主侧栏重渲染后会校验父节点和相邻顺序再放回。
+- 右侧抽屉左缘可拖动调宽，支持键盘左右方向键与 Home/End；宽度在本机浏览器保存，窗口窄于 760px 时自动全屏，避免横向溢出。
 
 - MP4/WebM 使用独立的固定 `<video>` 层，静音、循环、`cover` 播放；页面隐藏时暂停，恢复可见时继续。
 - Wallpaper Engine `scene.pkg` 不能由浏览器直接解码，因此使用项目的 `preview.gif`、`preview.jpg` 等预览图。
-- 扫描时会读取预览分辨率（上传图片也会读取），并优先选择项目根目录中更高分辨率的 `wallpaper` / `background` / `preview` 图片。自动适配以全窗口铺满为优先：普通高清素材使用 `cover`，左右不会留空；需要保留完整画面时可手动选择“完整显示”。短边不足 720px 的 Scene 预览始终走“模糊环境填充 + 不模糊 contain 主体”，避免把小图直接裁切拉满全屏。
+- 扫描时会读取预览分辨率（上传图片也会读取），并优先选择项目根目录中更高分辨率的 `wallpaper` / `background` / `preview` 图片。自动适配以全窗口铺满为优先：普通高清素材使用 `cover`，左右不会留空；需要保留完整画面时可手动选择“完整显示”。短边不足 720px 的 Scene 预览始终走“模糊环境填充 + 不模糊 contain 主体”，并按实际放大倍率做轻量细节与色彩补偿，避免把小图直接裁切拉满全屏；该补偿不会把低分辨率预览伪装成真实高清素材。
 - 系统启用“减少动态效果”或视频加载失败时自动回退到预览图。
-- 所有 GIF 背景都会从其自身帧延迟计算循环时长，并提前跳过末尾 15%（至少 120ms、最多 300ms）：插件在重置前会捕获接近安全结束点的当前帧，保持该冻结帧直到新 GIF 的首帧完成解码，以避免循环边界黑/白闪屏或跳回旧首帧。此策略不修改 Wallpaper Engine 原始文件；MP4/WebM 继续使用浏览器原生循环。
+- 所有 GIF 背景都会从其自身帧延迟计算循环时长，并提前跳过末尾 15%（至少 120ms、最多 300ms）：插件在重置前会捕获接近安全结束点的当前帧，保持该冻结帧；新 GIF 在后台稳定约 140ms 后才淡入，以避免循环边界或首帧的黑/白闪屏。此策略不修改 Wallpaper Engine 原始文件；MP4/WebM 继续使用浏览器原生循环。
 - 背景层 `pointer-events: none`，不接管鼠标或键盘事件；侧栏、对话区、文件区和 Composer 采用深色半透明玻璃与可调 `backdrop-filter`，形成可见毛玻璃质感。正文固定为高对比浅色以保证阅读，壁纸取色仍驱动边框、活动项和按钮。弹窗、菜单、代码和编辑器保持更高不透明度。
 - 每次应用壁纸都会在浏览器内对当前图片或视频海报取色，自动派生面板、边框、按钮、活动项和悬停色；不依赖固定壁纸或本机主题。
 - 「界面适配设置」可调背景暗化（0–100%）、壁纸亮度（50–150%）、铺满/完整显示、面板不透明度（15–90%）、输入区不透明度（30–100%）、毛玻璃强度（0–32px），并可在自动取色和手动双强调色之间切换。
@@ -54,7 +56,8 @@
 - 共享状态原子保存到 `~/.dsh/dsh-wallpaper/skin-state.json`，多个窗口通过 revision 轮询、窗口聚焦和 `BroadcastChannel` 同步。
 - 首次启动且宿主尚无状态时，会尝试迁移旧键 `dsh.wallpaperskin.skin`；迁移成功后删除旧键。
 - 「壁纸」入口由独立观察器固定在 SSH 下方；宿主侧栏重渲染把节点移动到其他位置时会自动放回。
-- 打开图库后，插件每 6 秒轻量刷新一次本机 Wallpaper Engine 创意工坊与本地项目目录；窗口恢复到前台时也会立即刷新。新下载的壁纸会自动出现在图库中，但绝不会未经操作自动替换当前 Harness 背景。
+- 打开图库后，插件会监听 Wallpaper Engine 创意工坊、本地项目和上传目录的变化，并以长轮询立即同步到图库；监听不可用的网络盘会自动降级为每 5 秒刷新一次。窗口恢复到前台时也会立即刷新。新下载的壁纸会自动出现在图库中，但绝不会未经操作自动替换当前 Harness 背景。
+- 「动态背景」可在“播放动图 / 视频”和“静态预览（停止播放）”间切换。静态预览会冻结 Harness 中的 GIF 或视频画面，不会暂停 Wallpaper Engine 或修改 Windows 桌面。
 - `dsh-wallpaper install` 从本地开发目录安装时会创建 Profile 内的安全链接，而不是复制一个缺少依赖的半包；从 npm 正常安装时继续使用包管理器安装的完整依赖树。两种方式都不会写死用户名或盘符。
 
 ## Agent 工具
@@ -69,11 +72,12 @@
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/api/dsh-wallpaper/status` | 引擎发现状态与当前桌面壁纸 |
-| GET | `/api/dsh-wallpaper/list` | 图库；支持 `q` / `type` / `tag` |
+| GET | `/api/dsh-wallpaper/list` | 图库；支持 `q` / `type` / `tag`，返回 `revision` 与监听状态 |
+| GET | `/api/dsh-wallpaper/library-watch?revision=&timeout=` | 本机素材目录变化的长轮询通知；最大等待 25 秒 |
 | GET | `/api/dsh-wallpaper/preview?p=...` | 兼容旧客户端的白名单图片预览 |
 | GET/HEAD | `/api/dsh-wallpaper/media?id=...` | 按扫描 ID 流式提供 Harness 媒体；支持单段 HTTP Range |
 | GET | `/api/dsh-wallpaper/skin` | 读取共享 Harness 状态及解析后的媒体描述 |
-| POST | `/api/dsh-wallpaper/skin` | `{ action, id?, scrim?, panelOpacity?, inputOpacity?, blur?, brightness?, backgroundFit?, presetId?, paletteMode?, accentColor?, secondaryAccentColor?, expectedRevision? }` |
+| POST | `/api/dsh-wallpaper/skin` | `{ action, id?, scrim?, panelOpacity?, inputOpacity?, blur?, brightness?, backgroundFit?, motionMode?: 'play'|'static', presetId?, paletteMode?, accentColor?, secondaryAccentColor?, expectedRevision? }` |
 | GET/POST | `/api/dsh-wallpaper/scene-bridge` | 读取或受控操作 Scene 高清桥；当前只接受显式本地 helper，未知下载会拒绝 |
 | POST | `/api/dsh-wallpaper/apply` | 旧桌面接口：`{ id, mode, imagePath? }` |
 | POST | `/api/dsh-wallpaper/upload?name=...` | 上传图片，最大 64 MB |
@@ -135,7 +139,7 @@ node .\bin\dsh-wallpaper.mjs install
    - **WE 播放**：让 Wallpaper Engine 将该项目作为桌面壁纸播放。适用于 Scene、视频和网页壁纸；需要 Wallpaper Engine 已安装并运行。
    - **Windows 静态**：将该项目的静态图片预览设为 Windows 桌面。只适用于 jpg/png/bmp/webp 等静态图片；GIF、视频和 Scene 请使用前两种方式。
 3. 顶部的 **随机 Harness** 会随机切换 Harness 背景，**随机桌面** 会随机切换桌面壁纸，**刷新** 会重新扫描本机图库。
-4. 展开 **界面适配设置**，可按需要调整背景遮罩、面板/输入区不透明度、毛玻璃、亮度，以及“铺满裁切”或“完整显示”。还可选择自动取色或手动双主题色、启用安全预设；**恢复自动适配** 可还原默认外观。这些设置只影响 Harness 的显示效果。
+4. 展开 **界面适配设置**，可按需要调整背景遮罩、面板/输入区不透明度、毛玻璃、亮度，以及“铺满裁切”或“完整显示”。“动态背景”可选播放动图/视频，或在 Harness 中静态预览；还可选择自动取色或手动双主题色、启用安全预设；**恢复自动适配** 可还原默认外观。这些设置只影响 Harness 的显示效果。
 5. 想恢复默认界面时点击 **清除 Harness 背景**。它只清除 Harness 背景，不会停止 Wallpaper Engine 或恢复 Windows 桌面壁纸。
 
 也可以使用自己的图片：点击 **上传并设为 Harness**，选择 jpg/jpeg/png/bmp/gif/webp 图片；或者输入一张本地静态图片的**绝对路径**，点击 **设为 Windows 桌面**。上传的图片只保存到本机。

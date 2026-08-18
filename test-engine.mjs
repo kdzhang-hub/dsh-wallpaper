@@ -222,6 +222,7 @@ test('skin state is atomic, restart-safe, revision-checked, and degrades after d
       blur: 12,
       brightness: 0.82,
       backgroundFit: 'contain',
+      motionMode: 'static',
       paletteMode: 'manual',
       accentColor: '#A1B2C3',
       secondaryAccentColor: '#33AA77',
@@ -235,6 +236,7 @@ test('skin state is atomic, restart-safe, revision-checked, and degrades after d
     assert.equal(applied.skin.blur, 12)
     assert.equal(applied.skin.brightness, 0.82)
     assert.equal(applied.skin.backgroundFit, 'contain')
+    assert.equal(applied.skin.motionMode, 'static')
     assert.equal(applied.skin.schemaVersion, 2)
     assert.equal(applied.skin.preset, null)
     assert.equal(applied.skin.presets.length >= 1, true)
@@ -256,6 +258,7 @@ test('skin state is atomic, restart-safe, revision-checked, and degrades after d
     assert.equal(restored.blur, 12)
     assert.equal(restored.brightness, 0.82)
     assert.equal(restored.backgroundFit, 'contain')
+    assert.equal(restored.motionMode, 'static')
 
     const [first, second] = await Promise.all([
       restarted.updateSkin({ action: 'apply', id: 'workshop:video', expectedRevision: 1 }),
@@ -270,6 +273,7 @@ test('skin state is atomic, restart-safe, revision-checked, and degrades after d
     assert.equal((await restarted.updateSkin({ action: 'apply', blur: 33 })).status, 400)
     assert.equal((await restarted.updateSkin({ action: 'apply', brightness: 2 })).status, 400)
     assert.equal((await restarted.updateSkin({ action: 'apply', backgroundFit: 'stretch' })).status, 400)
+    assert.equal((await restarted.updateSkin({ action: 'apply', motionMode: 'loop-forever' })).status, 400)
     assert.equal((await restarted.updateSkin({ action: 'apply', presetId: 'unknown-remote-theme' })).status, 400)
     const preset = await restarted.updateSkin({ action: 'apply', presetId: 'aurora' })
     assert.equal(preset.ok, true)
@@ -284,6 +288,26 @@ test('skin state is atomic, restart-safe, revision-checked, and degrades after d
     assert.equal(degraded.wallpaperId, null)
     assert.equal(degraded.revision, 4)
   } finally {
+    fixture.cleanup()
+  }
+})
+
+test('library change watch coalesces events and stops cleanly', async () => {
+  const fixture = createFixture()
+  try {
+    const before = await fixture.engine.librarySnapshot()
+    assert.equal(typeof before.watching, 'boolean')
+    const waiting = fixture.engine.waitForLibraryChange(before.revision, 2000)
+    fixture.engine.scheduleLibraryChange()
+    fixture.engine.scheduleLibraryChange()
+    const changed = await waiting
+    assert.equal(changed.changed, true)
+    assert.equal(changed.revision, before.revision + 1)
+    fixture.engine.close()
+    const after = await fixture.engine.librarySnapshot()
+    assert.equal(after.revision, changed.revision)
+  } finally {
+    fixture.engine.close()
     fixture.cleanup()
   }
 })
@@ -370,16 +394,26 @@ test('media and skin routes support HEAD, streaming Range, 416, body limits, and
     const applied = json(await request(host.base, '/api/dsh-wallpaper/skin', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action: 'apply', id: 'workshop:scene', scrim: 0.35, panelOpacity: 0.6, inputOpacity: 0.8, blur: 10, paletteMode: 'manual', accentColor: '#336699', secondaryAccentColor: '#55aa77' }),
+      body: JSON.stringify({ action: 'apply', id: 'workshop:scene', scrim: 0.35, panelOpacity: 0.6, inputOpacity: 0.8, blur: 10, motionMode: 'static', paletteMode: 'manual', accentColor: '#336699', secondaryAccentColor: '#55aa77' }),
     }))
     assert.equal(applied.skin.enabled, true)
     assert.equal(applied.skin.wallpaper.harness.kind, 'image')
     assert.equal(applied.skin.panelOpacity, 0.6)
     assert.equal(applied.skin.inputOpacity, 0.8)
     assert.equal(applied.skin.blur, 10)
+    assert.equal(applied.skin.motionMode, 'static')
     assert.equal(applied.skin.accentColor, '#336699')
     assert.equal(applied.skin.secondaryAccentColor, '#55aa77')
     assert.equal(applied.skin.schemaVersion, 2)
+
+    const library = json(await request(host.base, '/api/dsh-wallpaper/list'))
+    assert.equal(Number.isSafeInteger(library.revision), true)
+    assert.equal(typeof library.watching, 'boolean')
+    const libraryWatch = request(host.base, `/api/dsh-wallpaper/library-watch?revision=${library.revision}&timeout=2000`)
+    fixture.engine.scheduleLibraryChange()
+    const watched = json(await libraryWatch)
+    assert.equal(watched.changed, true)
+    assert.equal(watched.revision, library.revision + 1)
 
     const bridge = json(await request(host.base, '/api/dsh-wallpaper/scene-bridge'))
     assert.equal(bridge.bridge.available, false)
@@ -398,6 +432,13 @@ test('media and skin routes support HEAD, streaming Range, 416, body limits, and
       body: JSON.stringify({ action: 'apply', panelOpacity: 1, inputOpacity: 2, blur: 99, accentColor: 'blue', secondaryAccentColor: 'green' }),
     })
     assert.equal(invalidAppearance.status, 400)
+
+    const invalidMotion = await request(host.base, '/api/dsh-wallpaper/skin', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'apply', motionMode: 'always' }),
+    })
+    assert.equal(invalidMotion.status, 400)
 
     const tooLarge = await request(host.base, '/api/dsh-wallpaper/skin', {
       method: 'POST',
@@ -470,7 +511,7 @@ test('CLI installs and uninstalls against an isolated DSH profile', () => {
     const installed = run(['install'])
     assert.equal(installed.registered, true)
     const manifest = JSON.parse(readFileSync(join(profile, 'package.json'), 'utf8'))
-    assert.equal(manifest.dependencies['backdrop-bridge-dsh'], 'file:node_modules/backdrop-bridge-dsh')
+    assert.match(manifest.dependencies['backdrop-bridge-dsh'], /^(?:link:|file:node_modules\/)/)
     assert.equal(manifest.dsh.profile.bundles.includes('backdrop-bridge-dsh'), true)
     assert.equal(manifest.dsh.profile.bundles.includes('dsh-wallpaper'), false)
     assert.equal(readFileSync(join(profile, 'node_modules', 'backdrop-bridge-dsh', 'package.json'), 'utf8').includes('backdrop-bridge-dsh'), true)
@@ -502,12 +543,16 @@ test('client skin uses wallpaper-derived surfaces and generation-safe image repl
   assert.match(client, /第二强调色/)
   assert.match(client, /--wp-send-color/)
   assert.match(client, /ensureContrast\(accent, surface, 4\.5/)
-  assert.match(client, /ensureContrast\(foregroundPrimary, surface, 4\.5/)
+  assert.match(client, /var foregroundPrimary = \[248, 250, 255\]/)
   assert.match(client, /var vibrant/)
-  assert.match(client, /ensureContrast\(secondary, \[255, 255, 255\], 4\.5/)
+  assert.match(client, /ensureContrast\(secondary, surface, 4\.5/)
   assert.match(client, /markAdaptiveSurfaces/)
   assert.match(client, /data-dsh-wallpaper-surface/)
   assert.match(client, /data-wp-low-quality/)
+  assert.match(client, /brightness\(var\(--wp-brightness,1\)\) saturate\(var\(--wp-detail-saturation,1\.04\)\) contrast\(var\(--wp-detail-contrast,1\.05\)\)/)
+  assert.match(client, /function applyDetailEnhancement\(harness\)/)
+  assert.match(client, /upscale >= 3/)
+  assert.match(client, /layer\.dataset\.wpDetail = strong \? 'strong'/)
   assert.match(client, /wpAmbient/)
   assert.match(client, /z-index: -1/)
   assert.match(client, /isolation: isolate/)
@@ -527,17 +572,76 @@ test('client skin uses wallpaper-derived surfaces and generation-safe image repl
   assert.match(client, /scheduleGifLoop/)
   assert.match(client, /captureLeadMs/)
   assert.match(client, /Freeze the \*current\* near-tail frame/)
+  assert.match(client, /var retainedGifStill = restartingGif/)
+  assert.match(client, /Do not overwrite it with the newly decoded first GIF/)
+  assert.match(client, /window\.setTimeout\(revealGif, 180\)/)
   assert.match(client, /GIF 安全帧/)
   assert.match(client, /animation\.safeLoopMs/)
   assert.match(client, /resolveBackdropFit/)
   assert.match(client, /applyBackdropFit/)
   assert.match(client, /data-wp-fit="ambient"/)
-  assert.match(client, /sourceRatio \/ viewportRatio/)
+  assert.match(client, /default is deliberately full-bleed/)
+  assert.match(client, /harness && harness\.fit === 'ambient' \? 'ambient' : 'cover'/)
   assert.match(client, /window\.addEventListener\('resize'/)
   assert.match(client, /background: var\(--wp-bg-layer-1\) !important/)
   assert.match(client, /saturate\(1\.20\) contrast\(1\.03\)/)
+  assert.match(client, /var foregroundPrimary = \[248, 250, 255\]/)
+  assert.match(client, /\[data-pane\], \[data-composer-seat\]/)
+  assert.match(client, /data-aionui-explorer-col/)
+  assert.match(client, /data-aionui-preview-col/)
+  assert.match(client, /--aion-text-primary:var\(--wp-fg-primary\)/)
+  assert.match(client, /node\.closest\('\[data-aionui-explorer-col\], \[data-aionui-preview-col\]'\)/)
+  assert.match(client, /\[data-composer-seat\]:focus-within > \*/)
+  assert.match(client, /box-shadow 180ms ease/)
+  assert.match(client, /prefers-reduced-motion:reduce/)
+  assert.match(client, /动态背景/)
+  assert.match(client, /motionMode: 'play'/)
+  assert.match(client, /skin\.motionMode === 'static'/)
+  assert.match(client, /data-wp-drawer-handle/)
+  assert.match(client, /dsh-wallpaper\.drawer-width\.v1/)
+  assert.match(client, /\[data-dsh-wallpaper-view\][^\n]+box-sizing: border-box[^\n]+max-width: calc\(100vw - 24px\) !important/)
+  assert.match(client, /\.wp-panel[^\n]+box-sizing: border-box[^\n]+width: 100%/)
+  assert.match(client, /role: 'separator'/)
+  assert.match(client, /ArrowLeft/)
+  assert.match(client, /API\.libraryWatch/)
+  assert.match(client, /library-watch/)
+  assert.match(client, /var watchController = new AbortController\(\)/)
+  assert.match(client, /libraryWatchController !== watchController\) return/)
+  assert.match(client, /::-webkit-scrollbar/)
+  assert.match(client, /data-wp-loading/)
+  assert.match(client, /window\.setTimeout\(revealGif, 140\)/)
+  assert.match(client, /wp-backdropBloom/)
+  assert.match(client, /data-wp-bloom="primary"/)
+  assert.match(client, /wpAmbientDrift/)
+  assert.match(client, /data-wp-motion="play"/)
+  assert.match(client, /prefers-reduced-motion:reduce[\s\S]*wp-backdropBloom/)
+  assert.match(client, /--wp-home-surface/)
+  assert.match(client, /--wp-composer-glow-strong/)
+  assert.match(client, /\[data-pane="conversation"\]:has\(\[data-composer-seat\]\)/)
+  assert.match(client, /layer\.dataset\.wpMotion = skin\.motionMode === 'static' \? 'static' : 'play'/)
+  assert.match(client, /wp-headerActions/)
+  assert.match(client, /wp-toolbarFilters/)
+  assert.match(client, /wp-toolbarActions/)
+  assert.match(client, /@media \(max-width: 560px\)/)
+  assert.match(client, /\.wp-scrim \{ display: grid/)
+  assert.match(client, /\.wp-setting--flow \.wp-btn \{ grid-column: 1 \/ -1/)
+  assert.match(client, /function syncDrawerDensity\(\)/)
+  assert.match(client, /container\.dataset\.wpCompact = ''/)
+  assert.match(client, /data-wp-compact/)
+  assert.match(client, /width <= 620/)
+  assert.match(client, /data-wp-force-fullscreen/)
+  assert.match(client, /measured < 360/)
+  assert.match(client, /width: 100vw !important/)
+  assert.match(client, /function availableViewportWidth\(\)/)
+  assert.match(client, /ResizeObserver/)
+  assert.match(client, /width: 28px; cursor: ew-resize/)
+  assert.match(client, /drawerFullscreenFallback/)
+  assert.match(client, /repeat\(auto-fit,minmax\(min\(340px,100%\),1fr\)\)/)
+  assert.match(client, /wp-setting--flow/)
+  assert.match(client, /--wp-accent-secondary,var\(--wp-accent,#4f8cff\)/)
+  assert.match(client, /\.wp-btn:disabled \{ opacity: 0\.5/)
   assert.match(client, /function syncLibrary\(\)/)
-  assert.match(client, /window\.setInterval\(syncLibrary, 6000\)/)
+  assert.match(client, /window\.setInterval\(syncLibrary, 5000\)/)
   assert.match(client, /fetch\(API\.list, \{ cache: 'no-store' \}\)/)
   assert.match(client, /已同步 Wallpaper Engine 素材库/)
   assert.match(client, /clearGifLoop\(true\)/)
