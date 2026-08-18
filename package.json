@@ -1,6 +1,6 @@
 {
   "name": "backdrop-bridge-dsh",
-  "description": "dsh-wallpaper: bring Wallpaper Engine wallpapers to DeepSeek Harness with dynamic backgrounds, adaptive UI styling, and desktop control.",
+  "description": "Turn Wallpaper Engine into a dynamic, adaptive background for DeepSeek Harness — with local library browsing and optional desktop control.",
   "displayName": "dsh-wallpaper",
   "version": "0.6.0",
   "author": "dsh-wallpaper contributors",

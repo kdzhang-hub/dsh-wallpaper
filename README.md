@@ -27,10 +27,10 @@
 
 - MP4/WebM 使用独立的固定 `<video>` 层，静音、循环、`cover` 播放；页面隐藏时暂停，恢复可见时继续。
 - Wallpaper Engine `scene.pkg` 不能由浏览器直接解码，因此使用项目的 `preview.gif`、`preview.jpg` 等预览图。
-- 扫描时会读取预览分辨率（上传图片也会读取），并优先选择项目根目录中更高分辨率的 `wallpaper` / `background` / `preview` 图片。自动适配会比较素材和当前窗口的宽高比：相近比例铺满；竖图、方图、超宽图或比例明显不匹配时使用“模糊环境填充 + 不模糊 contain 主体”，让主体完整可见且全窗口没有空边。短边不足 720px 的预览始终走这一安全模式，避免把小图直接裁切拉满全屏。
+- 扫描时会读取预览分辨率（上传图片也会读取），并优先选择项目根目录中更高分辨率的 `wallpaper` / `background` / `preview` 图片。自动适配以全窗口铺满为优先：普通高清素材使用 `cover`，左右不会留空；需要保留完整画面时可手动选择“完整显示”。短边不足 720px 的 Scene 预览始终走“模糊环境填充 + 不模糊 contain 主体”，避免把小图直接裁切拉满全屏。
 - 系统启用“减少动态效果”或视频加载失败时自动回退到预览图。
 - 所有 GIF 背景都会从其自身帧延迟计算循环时长，并提前跳过末尾 15%（至少 120ms、最多 300ms）：插件在重置前会捕获接近安全结束点的当前帧，保持该冻结帧直到新 GIF 的首帧完成解码，以避免循环边界黑/白闪屏或跳回旧首帧。此策略不修改 Wallpaper Engine 原始文件；MP4/WebM 继续使用浏览器原生循环。
-- 背景层 `pointer-events: none`，不接管鼠标或键盘事件；侧栏、对话区、文件区和 Composer 采用半透明颜色层与可调 `backdrop-filter`，形成可见的毛玻璃质感。弹窗、菜单、代码和编辑器保持高不透明度以保证可读性。
+- 背景层 `pointer-events: none`，不接管鼠标或键盘事件；侧栏、对话区、文件区和 Composer 采用深色半透明玻璃与可调 `backdrop-filter`，形成可见毛玻璃质感。正文固定为高对比浅色以保证阅读，壁纸取色仍驱动边框、活动项和按钮。弹窗、菜单、代码和编辑器保持更高不透明度。
 - 每次应用壁纸都会在浏览器内对当前图片或视频海报取色，自动派生面板、边框、按钮、活动项和悬停色；不依赖固定壁纸或本机主题。
 - 「界面适配设置」可调背景暗化（0–100%）、壁纸亮度（50–150%）、铺满/完整显示、面板不透明度（15–90%）、输入区不透明度（30–100%）、毛玻璃强度（0–32px），并可在自动取色和手动双强调色之间切换。
 - 可选安全预设仅定义双强调色、标题、空态和提示文案；不会接受 HTML、脚本、远程 URL 或任意 CSS，未选预设时完全使用自动适配。
@@ -40,6 +40,7 @@
 - 首次启动且宿主尚无状态时，会尝试迁移旧键 `dsh.wallpaperskin.skin`；迁移成功后删除旧键。
 - 「壁纸」入口由独立观察器固定在 SSH 下方；宿主侧栏重渲染把节点移动到其他位置时会自动放回。
 - 打开图库后，插件每 6 秒轻量刷新一次本机 Wallpaper Engine 创意工坊与本地项目目录；窗口恢复到前台时也会立即刷新。新下载的壁纸会自动出现在图库中，但绝不会未经操作自动替换当前 Harness 背景。
+- `dsh-wallpaper install` 从本地开发目录安装时会创建 Profile 内的安全链接，而不是复制一个缺少依赖的半包；从 npm 正常安装时继续使用包管理器安装的完整依赖树。两种方式都不会写死用户名或盘符。
 
 ## Agent 工具
 
@@ -89,24 +90,53 @@
 
 ## 安装、验证与卸载
 
-### 推荐：使用发布包的 CLI
+### 现在即可用：从 GitHub 获取并安装
 
-先在目标用户的 DSH 环境中执行：
+当前版本尚未发布到 npm；请使用下面的 GitHub 安装流程。PowerShell 中执行：
 
 ```powershell
-npx backdrop-bridge-dsh@0.6.0 doctor
-npx backdrop-bridge-dsh@0.6.0 install
+git clone https://github.com/kdzhang-hub/dsh-wallpaper.git
+cd dsh-wallpaper
+corepack pnpm install --frozen-lockfile
+node .\bin\dsh-wallpaper.mjs doctor
+node .\bin\dsh-wallpaper.mjs install
 ```
 
-`doctor` 的 JSON 输出应满足 `profileFound: true`；`install` 的输出还应满足 `packageFound: true` 和 `registered: true`。随后只重启一次 `dsh web`，在 SSH 下方打开“壁纸”入口，选择一张壁纸后确认聊天、SSH、文件区、编辑器、菜单和键盘操作都仍可用。
+先至少启动一次 `dsh web`，让 `DSH_HOME/profiles/web/` 存在。`doctor` 的 JSON 输出应包含 `profileFound: true`；`install` 后应包含 `packageFound: true` 和 `registered: true`。随后重启一次 `dsh web`，在 SSH 下方打开“壁纸”。
 
-若 DSH 主目录不在默认位置，先在同一个 PowerShell 会话指定它：
+如果 DSH 主目录不在默认位置，在执行 `doctor` 和 `install` 前指定它：
 
 ```powershell
 $env:DSH_HOME = 'D:\path\to\.dsh'
+node .\bin\dsh-wallpaper.mjs doctor
+node .\bin\dsh-wallpaper.mjs install
+```
+
+### 安装后怎么用
+
+1. 重启 `dsh web`，在左侧栏 **SSH** 下方点击 **壁纸**。首次打开会扫描本机 Wallpaper Engine 创意工坊和本地项目；可用搜索框、类型筛选和 **刷新** 查找素材。
+2. 在任意壁纸卡片上按目标选择一个操作：
+   - **设为 Harness 背景**：仅替换 DeepSeek Harness 的全窗口背景，**不会**改动 Windows 桌面。
+   - **WE 播放**：让 Wallpaper Engine 将该项目作为桌面壁纸播放。适用于 Scene、视频和网页壁纸；需要 Wallpaper Engine 已安装并运行。
+   - **Windows 静态**：将该项目的静态图片预览设为 Windows 桌面。只适用于 jpg/png/bmp/webp 等静态图片；GIF、视频和 Scene 请使用前两种方式。
+3. 顶部的 **随机 Harness** 会随机切换 Harness 背景，**随机桌面** 会随机切换桌面壁纸，**刷新** 会重新扫描本机图库。
+4. 展开 **界面适配设置**，可按需要调整背景遮罩、面板/输入区不透明度、毛玻璃、亮度，以及“铺满裁切”或“完整显示”；这些设置只影响 Harness 的显示效果。
+5. 想恢复默认界面时点击 **清除 Harness 背景**。它只清除 Harness 背景，不会停止 Wallpaper Engine 或恢复 Windows 桌面壁纸。
+
+也可以使用自己的图片：点击 **上传并设为 Harness**，选择 jpg/jpeg/png/bmp/gif/webp 图片；或者输入一张本地静态图片的**绝对路径**，点击 **设为 Windows 桌面**。上传的图片只保存到本机。
+
+> Scene 在浏览器中只能显示项目提供的预览图；若预览图很小，Harness 会用环境填充避免粗暴拉伸。想得到完整的动态 Scene 效果，请使用 **WE 播放**。
+
+### npm 发布后：使用 CLI
+
+当 `backdrop-bridge-dsh@0.6.0` 已发布到 npm 后，才可以使用：
+
+```powershell
 npx backdrop-bridge-dsh@0.6.0 doctor
 npx backdrop-bridge-dsh@0.6.0 install
 ```
+
+两种安装方式完成后，都应确认聊天、SSH、文件区、编辑器、菜单和键盘操作仍可用。
 
 ### 手动安装（供 Profile 维护者使用）
 
