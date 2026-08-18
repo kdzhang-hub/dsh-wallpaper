@@ -1,12 +1,27 @@
 # dsh-wallpaper（`backdrop-bridge-dsh` 0.6.0）
 
-**dsh-wallpaper** 是 Wallpaper Engine 与 DeepSeek Harness 的壁纸联动插件：扫描本机素材库，并在同一个「壁纸」入口中提供三类操作。源码、问题追踪和安全更新以 [GitHub 仓库](https://github.com/kdzhang-hub/dsh-wallpaper) 为准。
+> 把本机 Wallpaper Engine 素材库带进 DeepSeek Harness：浏览、预览并一键设为自适应玻璃背景；需要时也可直接交给 Wallpaper Engine 或 Windows 桌面。
+
+<p align="center">
+  <img src="assets/harness-forest.png" alt="dsh-wallpaper 将森林壁纸应用为 DeepSeek Harness 的半透明玻璃背景" width="96%">
+</p>
+
+<p align="center">
+  <img src="assets/harness-city.png" alt="dsh-wallpaper 的另一套 Harness 壁纸效果" width="62%">
+  <img src="assets/wallpaper-library.png" alt="dsh-wallpaper 壁纸图库与界面适配设置面板" width="25%">
+</p>
+
+**dsh-wallpaper** 将本机 Wallpaper Engine 创意工坊、本地项目和你上传的图片集中到 Harness 侧边栏的一个「壁纸」入口。源码、问题追踪和安全更新以 [GitHub 仓库](https://github.com/kdzhang-hub/dsh-wallpaper) 为准。
 
 由于 npm 上已存在同名包 `dsh-wallpaper@0.1.1`，当前 npm 分发、CLI 与 DSH bundle 技术标识为 `backdrop-bridge-dsh`；这不影响项目和仓库名称 `dsh-wallpaper`。
 
-- 设为 DeepSeek Harness 全窗口背景；
-- 交给 Wallpaper Engine 播放为动态桌面；
-- 将静态图片设为 Windows 原生桌面壁纸。
+## 你能做什么
+
+- **管理同一份本地图库**：自动发现 Wallpaper Engine 创意工坊和本地项目，也支持上传自己的图片；可按标题、标签和类型搜索筛选。
+- **一张壁纸，三个去向**：设为 DeepSeek Harness 全窗口背景；交给 Wallpaper Engine 播放 Scene、视频或网页壁纸；或将静态图片设为 Windows 原生桌面壁纸。
+- **让 Harness 随壁纸自适应**：自动取色、半透明玻璃、暗化、亮度、铺满/完整显示、手动双主题色和安全预设均可调整；设置会跨刷新和多窗口保留。
+- **让 Agent 也能控制**：可让 DeepSeek 列出、搜索、随机切换壁纸，或清除 Harness 背景，并查询 Wallpaper Engine 与当前桌面状态。
+- **默认只在本机工作**：不上传壁纸、不发送遥测；Harness 背景与 Windows 桌面相互独立，不会误改另一端。
 
 原 `dsh-wallpaper-skin` 的活动依赖已经合并到本插件；旧源码目录可以保留作回滚备份，但不应再与本插件同时加载。
 
@@ -120,7 +135,7 @@ node .\bin\dsh-wallpaper.mjs install
    - **WE 播放**：让 Wallpaper Engine 将该项目作为桌面壁纸播放。适用于 Scene、视频和网页壁纸；需要 Wallpaper Engine 已安装并运行。
    - **Windows 静态**：将该项目的静态图片预览设为 Windows 桌面。只适用于 jpg/png/bmp/webp 等静态图片；GIF、视频和 Scene 请使用前两种方式。
 3. 顶部的 **随机 Harness** 会随机切换 Harness 背景，**随机桌面** 会随机切换桌面壁纸，**刷新** 会重新扫描本机图库。
-4. 展开 **界面适配设置**，可按需要调整背景遮罩、面板/输入区不透明度、毛玻璃、亮度，以及“铺满裁切”或“完整显示”；这些设置只影响 Harness 的显示效果。
+4. 展开 **界面适配设置**，可按需要调整背景遮罩、面板/输入区不透明度、毛玻璃、亮度，以及“铺满裁切”或“完整显示”。还可选择自动取色或手动双主题色、启用安全预设；**恢复自动适配** 可还原默认外观。这些设置只影响 Harness 的显示效果。
 5. 想恢复默认界面时点击 **清除 Harness 背景**。它只清除 Harness 背景，不会停止 Wallpaper Engine 或恢复 Windows 桌面壁纸。
 
 也可以使用自己的图片：点击 **上传并设为 Harness**，选择 jpg/jpeg/png/bmp/gif/webp 图片；或者输入一张本地静态图片的**绝对路径**，点击 **设为 Windows 桌面**。上传的图片只保存到本机。

@@ -38,6 +38,42 @@ Also run `npm view backdrop-bridge-dsh version --json` immediately before the
 first publish. A 404 means the unscoped name was available at the time of the
 check, not that it is reserved; only the actual publish transaction claims it.
 
+## Publish to npm
+
+The configured npm package name is `backdrop-bridge-dsh`; the project and
+repository remain named `dsh-wallpaper`. The unscoped npm name
+`dsh-wallpaper` is already owned by another publisher, so do not attempt to
+publish it without an explicit transfer of ownership.
+
+After the release-owner fields and technical checks above pass, the release
+owner can publish from the repository root in PowerShell:
+
+```powershell
+# Sign in with the npm account that will own the package. Complete any 2FA prompt.
+npm login
+npm whoami
+
+# Check the name once more immediately before claiming it.
+npm view backdrop-bridge-dsh version --json
+
+# Publish the version from package.json. Do not paste passwords, tokens, or OTP codes into this repository.
+npm publish --access public
+```
+
+If npm reports that the version already exists, increase `package.json`'s
+`version`, commit that release change, rerun the checks, and publish the new
+version. npm versions are immutable and cannot be overwritten. After a
+successful publish, verify the public package and its installer:
+
+```powershell
+npm view backdrop-bridge-dsh version dist-tags --json
+$version = node -p "require('./package.json').version"
+npx "backdrop-bridge-dsh@$version" doctor
+```
+
+`npm publish` is an external, irreversible release operation. It is not run
+by this repository's scripts and should be performed only by the account owner.
+
 ## Manual acceptance
 
 On a disposable DSH Web Profile, run the documented install flow, restart the
